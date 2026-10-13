@@ -19,6 +19,8 @@ Spec: the owner's brief "claude_code_prompt_travel_playwright.md".
 - Docs: README (results, findings, limitations), TEST_PLAN, TEST_CASES (22 cases + 3 charters), BUG_REPORTS,
   AI_WORKFLOW.
 - Repo: https://github.com/tajveed-aslam/travel-booking-qa-playwright (owner asked to create and push as usual).
+- CI green on GitHub Actions (run 38361956180: static checks + 6-job matrix).
+- Portfolio entry added (`travel-booking-qa`, featured: false) with report and CI screenshots.
 
 ## In progress
 
