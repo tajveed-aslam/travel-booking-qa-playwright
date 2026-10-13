@@ -1,5 +1,7 @@
 # Travel booking QA: Playwright + TypeScript
 
+[![Playwright tests](https://github.com/tajveed-aslam/travel-booking-qa-playwright/actions/workflows/playwright.yml/badge.svg)](https://github.com/tajveed-aslam/travel-booking-qa-playwright/actions/workflows/playwright.yml)
+
 A test automation sample for a **travel booking platform**: search, booking, payment, cancellation. It shows how I
 build and run a Playwright suite the way a product team would: Page Object Model, API and UI layers, contract checks,
 cross-browser and mobile runs, GitHub Actions on every pull request, and clear reporting of what was found.
