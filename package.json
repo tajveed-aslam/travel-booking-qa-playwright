@@ -3,15 +3,20 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke --project=api --project=chromium",
+    "test:ui": "playwright test --grep @ui",
+    "test:api": "playwright test --project=api",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tajveed-aslam/travel-booking-qa-playwright.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/tajveed-aslam/travel-booking-qa-playwright/issues"
@@ -31,5 +36,8 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.2",
     "zod": "^4.6.7"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

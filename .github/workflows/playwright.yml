@@ -1,0 +1,106 @@
+name: Playwright tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *' # nightly, 02:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: playwright-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  static-checks:
+    name: Typecheck, lint, format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+
+  smoke:
+    name: Smoke (@smoke on Chromium + API)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-chromium-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:smoke
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: node scripts/ci-summary.mjs "Smoke (@smoke, chromium + api)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload report and traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  full:
+    name: Full suite (${{ matrix.project }})
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: api, browser: '' }
+          - { project: chromium, browser: chromium }
+          - { project: firefox, browser: firefox }
+          - { project: webkit, browser: webkit }
+          - { project: pixel-7, browser: chromium }
+          - { project: iphone-14, browser: webkit }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        if: matrix.browser != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+      - name: Install ${{ matrix.browser }}
+        if: matrix.browser != ''
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright test --project=${{ matrix.project }}
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: node scripts/ci-summary.mjs "Full suite: ${{ matrix.project }}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload report and traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ matrix.project }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

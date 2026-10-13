@@ -42,7 +42,9 @@ export class PurchasePage {
   }
 
   /** A line of the reservation summary, e.g. summaryValue('Price') -> "400". */
-  async summaryValue(label: 'Airline' | 'Flight Number' | 'Price' | 'Arbitrary Fees and Taxes' | 'Total Cost'): Promise<string> {
+  async summaryValue(
+    label: 'Airline' | 'Flight Number' | 'Price' | 'Arbitrary Fees and Taxes' | 'Total Cost',
+  ): Promise<string> {
     const line = this.page.locator('p', { hasText: `${label}:` }).first();
     const text = await line.innerText();
     return text.slice(text.indexOf(':') + 1).trim();

@@ -1,4 +1,5 @@
 import { bug, expect, test } from '../../fixtures';
+import type { BookingApi } from '../../utils/BookingApi';
 import { aBooking, isoDate } from '../../utils/builders';
 import { bookingIdListSchema, bookingSchema } from '../../utils/schemas';
 
@@ -47,7 +48,9 @@ test.describe('Bookings: create, read, list', { tag: ['@api', '@regression'] }, 
       const { bookingid } = await api.createBooking(booking);
       cleanup(bookingid);
       const ids = async (filters: Record<string, string>) =>
-        bookingIdListSchema.parse(await (await api.list({ lastname: booking.lastname, ...filters })).json()).map((b) => b.bookingid);
+        bookingIdListSchema
+          .parse(await (await api.list({ lastname: booking.lastname, ...filters })).json())
+          .map((b) => b.bookingid);
 
       // A window around the stay finds it.
       expect(await ids({ checkin: isoDate(39), checkout: isoDate(45) })).toEqual([bookingid]);
@@ -79,43 +82,50 @@ test.describe('Bookings: update with and without a token', { tag: ['@api', '@reg
 
     const res = await api.partialUpdate(bookingid, { totalprice: 610, additionalneeds: 'Dinner' }, token);
     expect(res.status()).toBe(200);
-    expect(await (await api.get(bookingid)).json()).toEqual({ ...original, totalprice: 610, additionalneeds: 'Dinner' });
+    expect(await (await api.get(bookingid)).json()).toEqual({
+      ...original,
+      totalprice: 610,
+      additionalneeds: 'Dinner',
+    });
   });
 
-  for (const call of ['PUT', 'PATCH', 'DELETE'] as const) {
+  const unauthenticated = {
+    PUT: (api: BookingApi, id: number) => api.update(id, aBooking({ totalprice: 1 })),
+    PATCH: (api: BookingApi, id: number) => api.partialUpdate(id, { totalprice: 1 }),
+    DELETE: (api: BookingApi, id: number) => api.delete(id),
+  };
+  for (const [call, send] of Object.entries(unauthenticated)) {
     test(`${call} without a token is rejected with 403 and changes nothing`, async ({ api, cleanup }) => {
       const original = aBooking();
       const { bookingid } = await api.createBooking(original);
       cleanup(bookingid);
 
-      const res =
-        call === 'PUT'
-          ? await api.update(bookingid, aBooking({ totalprice: 1 }))
-          : call === 'PATCH'
-            ? await api.partialUpdate(bookingid, { totalprice: 1 })
-            : await api.delete(bookingid);
-      expect(res.status()).toBe(403);
+      expect((await send(api, bookingid)).status()).toBe(403);
       expect(await (await api.get(bookingid)).json()).toEqual(original);
     });
   }
 });
 
 test.describe('Cancellation flow', { tag: ['@api', '@regression'] }, () => {
-  test('create -> modify -> cancel (delete) -> the booking is gone', { tag: '@smoke' }, async ({ api, token, cleanup }) => {
-    const { bookingid } = await api.createBooking(aBooking());
-    cleanup(bookingid);
+  test(
+    'create -> modify -> cancel (delete) -> the booking is gone',
+    { tag: '@smoke' },
+    async ({ api, token, cleanup }) => {
+      const { bookingid } = await api.createBooking(aBooking());
+      cleanup(bookingid);
 
-    const modified = await api.partialUpdate(bookingid, { additionalneeds: 'Cancel if flight delayed' }, token);
-    expect(modified.status()).toBe(200);
+      const modified = await api.partialUpdate(bookingid, { additionalneeds: 'Cancel if flight delayed' }, token);
+      expect(modified.status()).toBe(200);
 
-    const del = await api.delete(bookingid, token);
-    // Real behaviour: 201 Created for a delete (OBS-API-02).
-    expect(del.status()).toBe(201);
+      const del = await api.delete(bookingid, token);
+      // Real behaviour: 201 Created for a delete (OBS-API-02).
+      expect(del.status()).toBe(201);
 
-    expect((await api.get(bookingid)).status()).toBe(404);
-    // A second delete of the same booking returns 405, not 404 (OBS-API-02).
-    expect((await api.delete(bookingid, token)).status()).toBe(405);
-    const list = bookingIdListSchema.parse(await (await api.list()).json());
-    expect(list.map((b) => b.bookingid)).not.toContain(bookingid);
-  });
+      expect((await api.get(bookingid)).status()).toBe(404);
+      // A second delete of the same booking returns 405, not 404 (OBS-API-02).
+      expect((await api.delete(bookingid, token)).status()).toBe(405);
+      const list = bookingIdListSchema.parse(await (await api.list()).json());
+      expect(list.map((b) => b.bookingid)).not.toContain(bookingid);
+    },
+  );
 });

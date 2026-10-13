@@ -33,7 +33,10 @@ test.describe('Booking validation', { tag: ['@api', '@regression'] }, () => {
   }
 
   test('malformed JSON is rejected with 400', async ({ request }) => {
-    const res = await request.post('/booking', { headers: { 'Content-Type': 'application/json' }, data: '{"firstname":' });
+    const res = await request.post('/booking', {
+      headers: { 'Content-Type': 'application/json' },
+      data: '{"firstname":',
+    });
     expect(res.status()).toBe(400);
   });
 

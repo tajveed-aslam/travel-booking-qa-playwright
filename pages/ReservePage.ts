@@ -42,7 +42,9 @@ export class ReservePage {
     const flights: FlightOption[] = [];
     for (const row of await this.rows.all()) {
       const cells = await row.locator('td').allInnerTexts();
-      const [, flightNumber = '', airline = '', departs = '', arrives = '', priceText = ''] = cells.map((c) => c.trim());
+      const [, flightNumber = '', airline = '', departs = '', arrives = '', priceText = ''] = cells.map((c) =>
+        c.trim(),
+      );
       flights.push({ flightNumber, airline, departs, arrives, priceText, priceCents: toCents(priceText) });
     }
     return flights;
@@ -58,7 +60,10 @@ export class ReservePage {
 
   async chooseCheapestFlight(): Promise<FlightOption> {
     const flights = await this.flights();
-    const cheapest = flights.reduce((best, f, i) => (f.priceCents < flights[best]!.priceCents ? i : best), 0);
+    let cheapest = 0;
+    flights.forEach((f, i) => {
+      if (f.priceCents < (flights[cheapest]?.priceCents ?? Infinity)) cheapest = i;
+    });
     return this.chooseFlight(cheapest);
   }
 }
